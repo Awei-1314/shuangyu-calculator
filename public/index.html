@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>双鱼部落收益计算器</title>
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0;font-family:"Microsoft Yahei","PingFang SC",sans-serif;}
+        body{background:#000;min-height:100vh;color:#fff;}
+
+        /* 管理员模式：强制所有元素可点击 */
+        body.admin-mode #calcPage input,
+        body.admin-mode #calcPage select,
+        body.admin-mode #calcPage textarea,
+        body.admin-mode #calcPage button,
+        body.admin-mode #calcPage .tax-btn,
+        body.admin-mode #calcPage [role="button"],
+        body.admin-mode #calcPage input[type="range"]{
+            opacity:1 !important;
+            cursor:pointer !important;
+            pointer-events:auto !important;
+        }
+        body.admin-mode #calcPage input:disabled,
+        body.admin-mode #calcPage select:disabled{
+            opacity:1 !important;
+            cursor:text !important;
+            pointer-events:auto !important;
+        }
+
+        /* ========== 卡密激活页 ========== */
+        #activatePage{
+            display:flex;align-items:center;justify-content:center;
+            min-height:100vh;
+            background:radial-gradient(ellipse at center,#111 0%,#000 70%);
+        }
+        .activate-box{
+            background:#111;border:1px solid #222;border-radius:16px;
+            padding:40px;width:420px;box-shadow:0 0 60px rgba(40,199,128,0.06);
+        }
+        .activate-logo{text-align:center;margin-bottom:30px;}
+        .activate-logo h1{
+            font-size:22px;
+            background:linear-gradient(90deg,#fff,#28c780);
+            -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+            margin-bottom:8px;
+        }
+        .activate-logo p{font-size:12px;color:#555;}
+        .activate-field{margin-bottom:18px;}
+        .activate-field label{display:block;font-size:13px;color:#888;margin-bottom:6px;}
+        .activate-field input{
+            width:100%;background:#1a1a1a;border:1px solid #2a2a2a;
+            padding:12px 14px;border-radius:8px;font-size:15px;color:#fff;outline:none;
+            text-transform:uppercase;letter-spacing:1px;
+            transition:border-color .2s,box-shadow .2s;
+        }
+        .activate-field input:focus{border-color:#28c780;box-shadow:0 0 0 3px rgba(40,199,128,0.1);}
+        .activate-btn{
+            width:100%;background:linear-gradient(135deg,#28c780,#1fa868);
+            color:#fff;border:none;padding:13px;border-radius:8px;
+            font-size:16px;font-weight:600;cursor:pointer;transition:opacity .2s;margin-top:8px;
+        }
+        .activate-btn:hover{opacity:0.9;}
+        .activate-msg{font-size:13px;text-align:center;margin-top:12px;min-height:18px;}
+        .activate-msg.error{color:#ff5c5c;}
+        .activate-msg.success{color:#28c780;}
+        .card-types{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:24px;}
+        .card-type{background:#151515;border:1px solid #222;border-radius:8px;padding:12px 8px;text-align:center;}
+        .card-type .ct-icon{font-size:24px;margin-bottom:6px;}
+        .card-type .ct-name{font-size:13px;font-weight:600;color:#ccc;margin-bottom:4px;}
+        .card-type .ct-desc{font-size:11px;color:#555;}
+        .card-type.hour{border-color:#28c78033;}
+        .card-type.hour .ct-name{color:#28c780;}
+        .card-type.week{border-color:#60a5fa33;}
+        .card-type.week .ct-name{color:#60a5fa;}
+        .card-type.month{border-color:#fbbf2433;}
+        .card-type.month .ct-name{color:#fbbf24;}
+        .activate-tip{margin-top:20px;padding:12px;background:#151515;border-radius:8px;font-size:11px;color:#555;line-height:1.6;}
+        .activate-tip b{color:#777;}
+        .activated-info{background:#151515;border:1px solid #28c78033;border-radius:10px;padding:16px;margin-bottom:20px;text-align:center;}
+        .activated-info .ai-label{font-size:12px;color:#666;margin-bottom:6px;}
+        .activated-info .ai-time{font-size:18px;font-weight:700;color:#28c780;}
+        .activated-info .ai-remain{font-size:12px;color:#888;margin-top:6px;}
+        .admin-badge{display:inline-block;background:#fbbf2422;color:#fbbf24;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:600;margin-left:6px;}
+        .switch-login{text-align:center;margin-top:14px;font-size:12px;color:#666;}
+        .switch-login a{color:#28c780;cursor:pointer;text-decoration:none;}
+        .switch-login a:hover{text-decoration:underline;}
+
+        /* ========== 计算器页 ========== */
+        #calcPage{display:none;padding:30px 20px 50px;max-width:1100px;margin:0 auto;}
+        .top-bar{position:fixed;top:16px;right:20px;display:flex;align-items:center;gap:10px;z-index:100;}
+        .vip-badge{background:#28c78022;color:#28c780;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;}
+        .logout-btn{background:#1a1a1a;border:1px solid #2a2a2a;color:#888;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;}
+        .logout-btn:hover{color:#fff;border-color:#28c780;}
+    .admin-btn{background:#fbbf2422;color:#fbbf24;border:1px solid #fbbf2444;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600;}
+    .admin-btn:hover{background:#fbbf2433;}
+    .modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:200;align-items:center;justify-content:center;}
+    .modal-overlay.show{display:flex;}
+    .modal-box{background:#0d0d0d;border:1px solid #222;border-radius:14px;width:90%;max-width:800px;max-height:85vh;overflow-y:auto;padding:24px;}
+    .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+    .modal-title{font-size:18px;font-weight:600;display:flex;align-items:center;gap:8px;}
+    .modal-close{background:#1a1a1a;border:1px solid #2a2a2a;color:#888;width:32px;height:32px;border-radius:6px;cursor:pointer;font-size:16px;}
+    .modal-close:hover{color:#fff;border-color:#ff5c5c;}
+    .gen-section{background:#111;border:1px solid #1f1f1f;border-radius:10px;padding:16px;margin-bottom:20px;}
+    .gen-section h3{font-size:14px;color:#ccc;margin-bottom:12px;}
+    .gen-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;}
+    .gen-row .field{margin-bottom:0;}
+    .gen-btn{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#000;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;}
+    .gen-btn:hover{opacity:0.9;}
+    .card-list{margin-top:16px;}
+    .card-list-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+    .card-list-header h3{font-size:14px;color:#ccc;}
+    .card-list-actions{display:flex;gap:8px;}
+    .card-list-actions button{background:#1a1a1a;border:1px solid #2a2a2a;color:#888;padding:5px 12px;border-radius:6px;font-size:11px;cursor:pointer;}
+    .card-list-actions button:hover{color:#fff;border-color:#28c780;}
+    .card-list-actions button.danger:hover{border-color:#ff5c5c;color:#ff5c5c;}
+    .card-table{width:100%;border-collapse:collapse;font-size:12px;}
+    .card-table th{background:#151515;color:#888;padding:10px 8px;text-align:left;font-weight:500;border-bottom:1px solid #222;}
+    .card-table td{padding:10px 8px;border-bottom:1px solid #1a1a1a;color:#bbb;}
+    .card-table tr:hover{background:#111;}
+    .card-key{font-family:monospace;font-weight:600;color:#28c780;cursor:pointer;}
+    .card-key:hover{text-decoration:underline;}
+    .status-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;}
+    .status-tag.active{background:#28c78022;color:#28c780;}
+    .status-tag.used{background:#60a5fa22;color:#60a5fa;}
+    .status-tag.expired{background:#ff5c5c22;color:#ff5c5c;}
+    .type-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;}
+    .type-tag.hour{background:#28c78022;color:#28c780;}
+    .type-tag.week{background:#60a5fa22;color:#60a5fa;}
+    .type-tag.month{background:#fbbf2422;color:#fbbf24;}
+    .type-tag.forever{background:#a78bfa22;color:#a78bfa;}
+    .copy-btn{background:transparent;border:none;color:#666;cursor:pointer;font-size:11px;padding:2px 6px;border-radius:4px;}
+    .copy-btn:hover{color:#28c780;background:#28c78011;}
+    .del-btn{background:transparent;border:none;color:#666;cursor:pointer;font-size:11px;padding:2px 6px;border-radius:4px;}
+    .del-btn:hover{color:#ff5c5c;background:#ff5c5c11;}
+    .empty-state{text-align:center;padding:40px;color:#555;font-size:13px;}
+    .gen-msg{font-size:12px;margin-top:10px;min-height:16px;}
+    .gen-msg.success{color:#28c780;}
+    .gen-msg.error{color:#ff5c5c;}
+
+        .app-header{text-align:center;margin-bottom:28px;padding-top:10px;}
+        .app-tag{display:inline-flex;align-items:center;gap:6px;background:#28c78018;color:#28c780;padding:5px 16px;border-radius:20px;font-size:12px;margin-bottom:14px;border:1px solid #28c78033;}
+        .app-header h1{font-size:28px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;}
+        .app-header h1 .icon{color:#28c780;}
+        .app-header p{color:#666;font-size:13px;margin-top:10px;}
+
+        .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;}
+        @media(max-width:900px){.grid{grid-template-columns:1fr;}}
+
+        .card{background:#0d0d0d;border:1px solid #1f1f1f;border-radius:14px;padding:24px;}
+        .card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+        .card-title{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:600;}
+        .card-title .icon{width:32px;height:32px;background:#28c78018;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+        .card-subtitle{font-size:11px;color:#555;margin-top:4px;}
+        .gap-badge{background:#ff5c5c18;color:#ff5c5c;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid #ff5c5c33;}
+        .gap-badge.ok{background:#28c78018;color:#28c780;border-color:#28c78033;}
+
+        /* 输入框 */
+        .field{margin-bottom:16px;}
+        .field label{display:block;font-size:12px;color:#888;margin-bottom:6px;}
+        .field input[type="number"],.field input[type="text"]{
+            width:100%;background:#151515;border:1px solid #252525;
+            padding:10px 14px;border-radius:8px;font-size:15px;color:#fff;outline:none;
+            transition:border-color .2s;
+        }
+        .field input:focus{border-color:#28c780;}
+        .field .hint{font-size:10px;color:#444;margin-top:4px;}
+        .input-with-icon{position:relative;}
+        .input-with-icon .prefix{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#555;font-size:14px;}
+        .input-with-icon input{padding-left:32px !important;}
+
+        /* 滑块 */
+        .slider-field{margin-bottom:16px;}
+        .slider-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+        .slider-label span{font-size:12px;color:#888;}
+        .slider-label .val{font-size:14px;font-weight:600;color:#28c780;background:#28c78015;padding:3px 10px;border-radius:6px;}
+        input[type="range"]{
+            -webkit-appearance:none;width:100%;height:4px;background:#222;border-radius:2px;outline:none;
+        }
+        input[type="range"]::-webkit-slider-thumb{
+            -webkit-appearance:none;width:16px;height:16px;background:#28c780;border-radius:50%;cursor:pointer;
+            box-shadow:0 0 8px rgba(40,199,128,0.5);
+        }
+
+        /* 个税按钮组 */
+        .tax-group{margin-bottom:12px;}
+        .tax-label{font-size:12px;color:#888;margin-bottom:8px;}
+        .tax-buttons{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+        .tax-btn{
+            background:#151515;border:1px solid #252525;color:#888;
+            padding:10px 8px;border-radius:8px;font-size:12px;cursor:pointer;
+            transition:all .2s;text-align:center;
+        }
+        .tax-btn .rate{display:block;font-size:14px;font-weight:600;margin-top:2px;}
+        .tax-btn:hover{border-color:#333;color:#aaa;}
+        .tax-btn.active{background:#28c78015;border-color:#28c780;color:#28c780;}
+        .current-tax{font-size:11px;color:#555;margin-top:8px;}
+
+        /* 明细卡片 */
+        .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;}
+        .detail-card{background:#111;border:1px solid #1f1f1f;border-radius:10px;padding:12px 14px;}
+        .detail-card .dc-label{display:flex;align-items:center;gap:6px;font-size:11px;color:#666;margin-bottom:6px;}
+        .detail-card .dc-val{font-size:18px;font-weight:700;color:#ddd;}
+        .detail-card.highlight{border-color:#28c78044;background:#28c78008;}
+        .detail-card.highlight .dc-val{color:#28c780;}
+
+        /* 任务概况 */
+        .overview-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;}
+        .overview-card{background:#111;border:1px solid #1f1f1f;border-radius:10px;padding:12px;text-align:center;}
+        .overview-card .oc-label{display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;color:#666;margin-bottom:6px;}
+        .overview-card .oc-val{font-size:18px;font-weight:700;color:#ddd;}
+        .overview-card.danger{border-color:#ff5c5c33;}
+        .overview-card.danger .oc-val{color:#ff5c5c;}
+
+        /* 成本测算 */
+        .cost-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+        .cost-card{background:#111;border:1px solid #1f1f1f;border-radius:10px;padding:14px;position:relative;}
+        .cost-card .cc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+        .cost-card .cc-title{display:flex;align-items:center;gap:6px;font-size:12px;color:#888;}
+        .cost-card .cc-tag{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;}
+        .cost-card .cc-tag.profit{background:#28c78022;color:#28c780;}
+        .cost-card .cc-tag.loss{background:#ff5c5c22;color:#ff5c5c;}
+        .cost-card .cc-val{font-size:22px;font-weight:700;margin-bottom:4px;}
+        .cost-card .cc-val.profit{color:#28c780;}
+        .cost-card .cc-val.loss{color:#ff5c5c;}
+        .cost-card .cc-desc{font-size:10px;color:#555;}
+
+        /* 福利 */
+        .welfare-section{margin-top:16px;}
+        .welfare-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+        .welfare-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#ccc;}
+        .welfare-total-label{font-size:11px;color:#555;}
+        .welfare-total-val{font-size:14px;font-weight:700;color:#28c780;}
+        .welfare-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;}
+        .welfare-field{margin-bottom:0;}
+        .welfare-field label{display:flex;align-items:center;gap:4px;font-size:11px;color:#777;margin-bottom:4px;}
+        .welfare-field input{
+            width:100%;background:#151515;border:1px solid #252525;
+            padding:8px 10px;border-radius:6px;font-size:13px;color:#fff;outline:none;
+        }
+        .welfare-field input:focus{border-color:#28c780;}
+        .welfare-sum{display:flex;justify-content:space-between;align-items:center;background:#111;border:1px solid #1f1f1f;border-radius:8px;padding:10px 14px;margin-top:10px;}
+        .welfare-sum .ws-label{font-size:12px;color:#888;}
+        .welfare-sum .ws-val{font-size:16px;font-weight:700;color:#28c780;}
+
+        /* 折叠参考 */
+        .collapse-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:10px 12px;background:#111;border:1px solid #1f1f1f;border-radius:8px;margin-top:12px;font-size:11px;color:#666;user-select:none;}
+        .collapse-header:hover{color:#888;}
+        .collapse-body{display:none;padding:14px;background:#0a0a0a;border:1px solid #1f1f1f;border-top:none;border-radius:0 0 8px 8px;font-size:11px;color:#666;line-height:1.9;}
+        .collapse-body.show{display:block;}
+        .collapse-body b{color:#999;}
+    </style>
+</head>
+<body>
+
+<!-- ========== 卡密激活页 ========== -->
+<div id="activatePage">
+    <div class="activate-box">
+        <div class="activate-logo">
+            <h1>🐟 双鱼部落收益计算器</h1>
+            <p>忧郁の专属 · 2026年8月最新政策</p>
+        </div>
+        <div id="activatedState" style="display:none;">
+            <div class="activated-info">
+                <div class="ai-label">当前卡密已激活，到期时间</div>
+                <div class="ai-time" id="expireTime">—</div>
+                <div class="ai-remain" id="remainTime">—</div>
+            </div>
+            <button class="activate-btn" onclick="enterApp()">进入计算器</button>
+            <div class="activate-msg" style="margin-top:14px;">
+                <a onclick="showActivateForm()" style="color:#666;cursor:pointer;font-size:12px;">更换卡密 / 重新激活</a>
+            </div>
+        </div>
+        <div id="nameLoginForm" style="display:none;">
+            <div class="activate-logo">
+                <h1>🐟 双鱼部落收益计算器</h1>
+                <p>忧郁の专属 · 2026年8月最新政策</p>
+            </div>
+            <div class="activate-field">
+                <label>请输入您的姓名</label>
+                <input type="text" id="userName" placeholder="请输入姓名" autofocus>
+            </div>
+            <button class="activate-btn" onclick="doNameLogin()">进 入</button>
+            <div class="activate-msg error" id="nameMsg"></div>
+            <div class="switch-login">
+                <a onclick="showAdminLogin()">🔑 管理员登录</a>
+            </div>
+            <div style="margin-top:20px;padding:12px;background:#151515;border-radius:8px;font-size:11px;color:#555;line-height:1.6;">
+                <b>说明：</b>输入姓名即可进入查看，所有功能默认为只读模式；<br>
+                需要编辑计算时，请在计算器内点击"激活卡密"解锁全部功能。
+            </div>
+        </div>
+
+        <!-- 管理员登录表单（默认显示） -->
+        <div id="adminLoginForm">
+            <div class="activate-logo">
+                <h1>🔑 管理员登录</h1>
+                <p>双鱼部落收益计算器 · 管理员通道</p>
+            </div>
+            <div class="activate-field">
+                <label>管理员账号</label>
+                <input type="text" id="adminUser" placeholder="请输入管理员账号" value="1243685477">
+            </div>
+            <div class="activate-field">
+                <label>管理员密码</label>
+                <input type="password" id="adminPass" placeholder="请输入管理员密码" value="197422">
+            </div>
+            <button class="activate-btn" onclick="doAdminLogin()">登 录</button>
+            <div class="activate-msg error" id="adminMsg"></div>
+            <div class="switch-login">
+                <a onclick="showActForm()">← 返回普通用户登录</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== 计算器页 ========== -->
+<div id="calcPage">
+    <div class="top-bar">
+        <div class="vip-badge" id="userNameBadge">访客</div>
+        <div class="vip-badge" id="vipBadge" style="display:none;">VIP会员</div>
+        <button class="admin-btn" id="adminCardBtn" style="display:none;" onclick="openCardModal()">🔑 卡密管理</button>
+        <button class="admin-btn" id="activateBtn" onclick="openActivateModal()">🔑 激活卡密</button>
+        <button class="admin-btn" id="changeCardBtn" style="display:none;" onclick="openActivateModal()">🔄 更改卡密</button>
+        <button class="logout-btn" id="logoutCardBtn" style="display:none;" onclick="logoutCard()">退出卡密</button>
+        <button class="logout-btn" onclick="doLogout()">退出登录</button>
+    </div>
+
+    <div class="app-header">
+        <div class="app-tag">📅 2026年8月 · 最新公会政策</div>
+        <h1><span class="icon">🐟</span>双鱼部落 · 收益计算器</h1>
+        <p>忧郁の专属礼物分成 & 任务亏损一键计算，清晰掌握每一笔收益，让决策更高效</p>
+    </div>
+
+    <div class="grid">
+        <!-- 左侧：礼物分成计算 -->
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title"><span class="icon">🎁</span>礼物分成计算</div>
+                    <div class="card-subtitle">输入面值与比例，自动计算到手收益</div>
+                </div>
+            </div>
+
+            <div class="field">
+                <label>礼物面值（元）</label>
+                <input type="number" id="giftValue" value="1000">
+            </div>
+
+            <div class="slider-field">
+                <div class="slider-label"><span>后台分成比例</span><span class="val" id="backRateVal">75.0%</span></div>
+                <input type="range" id="backRate" min="0" max="100" step="0.5" value="75">
+            </div>
+
+            <div class="slider-field">
+                <div class="slider-label"><span>手续费比例</span><span class="val" id="feeRateVal">7.0%</span></div>
+                <input type="range" id="feeRate" min="0" max="20" step="0.5" value="7">
+            </div>
+
+            <div class="tax-group">
+                <div class="tax-label">月收入档位（个税预估）</div>
+                <div class="tax-buttons" id="taxButtons">
+                    <div class="tax-btn active" data-rate="0">无<span class="rate">不扣税</span></div>
+                    <div class="tax-btn" data-rate="0.03">3000以下<span class="rate">3%</span></div>
+                    <div class="tax-btn" data-rate="0.05">3000-1万<span class="rate">5%</span></div>
+                    <div class="tax-btn" data-rate="0.08">1万-3万<span class="rate">8%</span></div>
+                    <div class="tax-btn" data-rate="0.10">3万-6万<span class="rate">10%</span></div>
+                    <div class="tax-btn" data-rate="0.15">6万以上<span class="rate">15%</span></div>
+                </div>
+                <div class="current-tax" id="currentTax">当前税率：不扣税</div>
+            </div>
+
+            <div class="detail-grid">
+                <div class="detail-card">
+                    <div class="dc-label">🎁 礼物面值</div>
+                    <div class="dc-val" id="dGiftValue">¥0.00</div>
+                </div>
+                <div class="detail-card">
+                    <div class="dc-label">💰 后台分成</div>
+                    <div class="dc-val" id="dBackMoney">¥0.00</div>
+                </div>
+                <div class="detail-card">
+                    <div class="dc-label">📉 手续费</div>
+                    <div class="dc-val" id="dFeeMoney">¥0.00</div>
+                </div>
+                <div class="detail-card">
+                    <div class="dc-label">💵 可提现（税前）</div>
+                    <div class="dc-val" id="dPreTax">¥0.00</div>
+                </div>
+                <div class="detail-card">
+                    <div class="dc-label">🧾 个税预估</div>
+                    <div class="dc-val" id="dTaxMoney">¥0.00</div>
+                </div>
+                <div class="detail-card highlight">
+                    <div class="dc-label">✅ 实际到手</div>
+                    <div class="dc-val" id="dRealGet">¥0.00</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：任务收益计算 -->
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title"><span class="icon">📋</span>任务收益计算</div>
+                    <div class="card-subtitle">自动判断盈亏，含福利抵扣测算</div>
+                </div>
+                <div class="gap-badge" id="gapBadge">还差 ¥0</div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                <div class="field">
+                    <label>任务档位</label>
+                    <div class="input-with-icon">
+                        <span class="prefix">◎</span>
+                        <input type="number" id="taskLevel" value="1.0" step="0.1">
+                    </div>
+                    <div class="hint">1.0=100元</div>
+                </div>
+                <div class="field">
+                    <label>老板已刷</label>
+                    <div class="input-with-icon">
+                        <span class="prefix">$</span>
+                        <input type="number" id="bossGive" value="10">
+                    </div>
+                    <div class="hint">实际收到礼物</div>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+                <div class="field">
+                    <label>自怼</label>
+                    <div class="input-with-icon">
+                        <span class="prefix">⚡</span>
+                        <input type="number" id="selfTask" value="0">
+                    </div>
+                    <div class="hint">自己硬刷金额</div>
+                </div>
+                <div class="field">
+                    <label>沃尔玛</label>
+                    <div class="input-with-icon">
+                        <span class="prefix">🛒</span>
+                        <input type="number" id="buyTask" value="0">
+                    </div>
+                    <div class="hint">沃尔玛买流水金额</div>
+                </div>
+                <div class="field">
+                    <label>沃尔玛比例</label>
+                    <div class="input-with-icon">
+                        <span class="prefix">%</span>
+                        <input type="number" id="buyDiscount" value="0.88" step="0.01">
+                    </div>
+                    <div class="hint">100.88即88折</div>
+                </div>
+            </div>
+
+            <div style="font-size:11px;color:#444;margin-bottom:10px;">
+                💡 后台 75% · 手续费 7% · 个税 0% · 税后可提现 69.8%
+            </div>
+
+            <div style="font-size:12px;color:#888;margin-bottom:8px;">📊 任务概况</div>
+            <div class="overview-grid">
+                <div class="overview-card">
+                    <div class="oc-label">◎ 任务目标</div>
+                    <div class="oc-val" id="oTarget">¥0</div>
+                    <div style="font-size:10px;color:#444;margin-top:2px;" id="oTargetHint">1.0 × 100</div>
+                </div>
+                <div class="overview-card">
+                    <div class="oc-label">💰 总流水</div>
+                    <div class="oc-val" id="oBoss">¥0</div>
+                    <div style="font-size:10px;color:#444;margin-top:2px;">老板+自怼+沃尔玛</div>
+                </div>
+                <div class="overview-card danger">
+                    <div class="oc-label">〰️ 缺口</div>
+                    <div class="oc-val" id="oGap">¥0</div>
+                    <div style="font-size:10px;color:#444;margin-top:2px;">距离目标还差</div>
+                </div>
+            </div>
+
+            <div style="font-size:12px;color:#888;margin-bottom:8px;">⚡ 成本与盈亏测算</div>
+            <div class="cost-grid">
+                <div class="cost-card">
+                    <div class="cc-header">
+                        <div class="cc-title">💰 总成本</div>
+                        <div class="cc-tag profit" id="cCostTag">成本</div>
+                    </div>
+                    <div class="cc-val profit" id="cCostVal">¥0.00</div>
+                    <div class="cc-desc" id="cCostDesc">自怼 ¥0 + 沃尔玛 ¥0</div>
+                </div>
+                <div class="cost-card">
+                    <div class="cc-header">
+                        <div class="cc-title">📊 最终盈亏</div>
+                        <div class="cc-tag profit" id="cNetTag">盈利</div>
+                    </div>
+                    <div class="cc-val profit" id="cNetVal">+¥0.00</div>
+                    <div class="cc-desc" id="cNetDesc">总收益 - 总成本 + 福利</div>
+                </div>
+            </div>
+
+            <div class="welfare-section">
+                <div class="welfare-header">
+                    <div class="welfare-title">🎁 福利奖励抵扣</div>
+                    <div>
+                        <span class="welfare-total-label">福利总额 </span>
+                        <span class="welfare-total-val" id="welfareTotal">¥0.00</span>
+                    </div>
+                </div>
+                <div class="welfare-grid">
+                    <div class="welfare-field"><label>🎵 麦序奖励</label><input type="number" id="wMai" value="0"></div>
+                    <div class="welfare-field"><label>🏆 周榜奖励</label><input type="number" id="wWeek" value="0"></div>
+                    <div class="welfare-field"><label>💡 收光奖励</label><input type="number" id="wShou" value="0"></div>
+                    <div class="welfare-field"><label>🎤 主持福利</label><input type="number" id="wHost" value="0"></div>
+                    <div class="welfare-field"><label>🌙 通宵福利</label><input type="number" id="wNight" value="0"></div>
+                    <div class="welfare-field"><label>🎙️ 全麦福利</label><input type="number" id="wAll" value="0"></div>
+                    <div class="welfare-field"><label>👥 拉人福利</label><input type="number" id="wInvite" value="0"></div>
+                    <div class="welfare-field"><label>➕ 其他福利</label><input type="number" id="wOther" value="0"></div>
+                </div>
+                <div class="welfare-sum">
+                    <span class="ws-label">➕ 福利抵扣人民币</span>
+                    <span class="ws-val" id="welfareSum">¥0.00</span>
+                </div>
+            </div>
+
+            <div class="collapse-header" onclick="toggleRef()">
+                <span>💡 乌云福利制度参考（双鱼部落）</span>
+                <span id="refArrow">展开</span>
+            </div>
+            <div class="collapse-body" id="refBody">
+                <b>麦序福利：</b>周第一1880钻 / 第二1180钻 / 第三720钻 / 40+无排名520钻<br>
+                <b>周榜福利：</b>第一7200钻(3wR) / 第二4200钻(2wR) / 第三2700钻(1wR)<br>
+                <b>收光福利：</b>100r-30钻 / 1w-4000钻<br>
+                <b>主持福利：</b>08-02满勤2000钻 / 02-08满勤2300钻<br>
+                <b>通宵福利：</b>排满4h 200钻 / 排满8h 400钻<br>
+                <b>全麦福利：</b>全麦10R奖励30钻（不低于6人）<br>
+                <b>拉人福利：</b>周麦序40(1500R) 900钻 / 周麦序80(2000R) 1200钻<br>
+                <b>结算方式：</b>以礼物结算，10钻=1元
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 卡密管理弹窗 -->
+<div class="modal-overlay" id="cardModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title">🔑 卡密管理 <span style="font-size:12px;color:#666;font-weight:400;">管理员专属</span></div>
+            <button class="modal-close" onclick="closeCardModal()">✕</button>
+        </div>
+        <div class="gen-section">
+            <h3>生成新卡密</h3>
+            <div class="gen-row">
+                <div class="field">
+                    <label>卡密类型</label>
+                    <select id="genType" style="width:100%;background:#151515;border:1px solid #252525;padding:10px 14px;border-radius:8px;font-size:14px;color:#fff;outline:none;">
+                        <option value="hour">⏱️ 1小时体验卡</option>
+                        <option value="week">📅 周卡（7天）</option>
+                        <option value="month">👑 月卡（30天）</option>
+                        <option value="forever">♾️ 永久卡</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>生成数量</label>
+                    <input type="number" id="genCount" value="1" min="1" max="100" style="width:100%;background:#151515;border:1px solid #252525;padding:10px 14px;border-radius:8px;font-size:14px;color:#fff;outline:none;">
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <button class="gen-btn" onclick="generateCards()">⚡ 生成卡密</button>
+                </div>
+                <div></div>
+            </div>
+            <div class="gen-msg" id="genMsg"></div>
+        </div>
+        <div class="card-list">
+            <div class="card-list-header">
+                <h3>卡密列表 <span id="cardCount" style="color:#666;font-size:12px;font-weight:400;">(0张)</span></h3>
+                <div class="card-list-actions">
+                    <button onclick="refreshCardList()">🔄 刷新</button>
+                    <button onclick="clearExpiredCards()">🗑️ 清理过期</button>
+                    <button class="danger" onclick="clearAllCards()">⚠️ 清空全部</button>
+                </div>
+            </div>
+            <div id="cardTableContainer">
+                <div class="empty-state">暂无卡密，点击上方"生成卡密"创建</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 卡密激活弹窗 -->
+<div class="modal-overlay" id="activateModal">
+    <div class="modal-box" style="max-width:420px;">
+        <div class="modal-header">
+            <div class="modal-title">🔑 卡密激活 <span style="font-size:12px;color:#666;font-weight:400;">解锁全部功能</span></div>
+            <button class="modal-close" onclick="closeActivateModal()">✕</button>
+        </div>
+        <div class="gen-section">
+            <div class="activate-field">
+                <label>请输入卡密</label>
+                <input type="text" id="modalCardKey" placeholder="例如：MONTH-XXXXXX" style="width:100%;background:#151515;border:1px solid #252525;padding:12px 14px;border-radius:8px;font-size:15px;color:#fff;outline:none;text-transform:uppercase;letter-spacing:1px;">
+            </div>
+            <button class="gen-btn" style="width:100%;" onclick="doModalActivate()">⚡ 激活卡密</button>
+            <div class="gen-msg" id="modalActivateMsg"></div>
+        </div>
+        <div style="padding:0 16px 16px;font-size:11px;color:#555;line-height:1.6;">
+            <b>卡密类型：</b>⏱️ 1小时体验卡 | 📅 周卡（7天）| 👑 月卡（30天）| ♾️ 永久卡<br>
+            <b>设备绑定：</b>卡密激活后自动绑定当前电脑，其他电脑无法使用此卡密。<br>
+            激活后可编辑所有计算功能，到期后自动恢复只读模式。
+        </div>
+    </div>
+</div>
+
+<script>
+// 全局错误处理
+window.onerror = function(msg, url, line, col, error) {
+    console.error('全局错误:', msg, '行:', line, '列:', col);
+    return true;
+};
+
+// 全局工具函数（必须放在最前面，避免初始化前访问错误）
+const el=id=>document.getElementById(id);
+let taxRate=0; // 税率变量，必须在事件绑定前定义
+
+// ========== 卡密系统（后端API版本） ==========
+const API_BASE = window.location.origin; // 后端API地址
+
+// 设备唯一标识（绑定电脑）
+function getDeviceId(){
+    let did=localStorage.getItem('sy_device_id');
+    if(!did){
+        const rand=Math.random().toString(36).substring(2,10).toUpperCase();
+        const ts=Date.now().toString(36).toUpperCase();
+        did='DEV-'+rand+'-'+ts;
+        localStorage.setItem('sy_device_id',did);
+    }
+    return did;
+}
+
+// 获取设备信息
+function getDeviceInfo(){
+    return navigator.userAgent.substring(0,100);
+}
+
+// 管理员Token
+function getAdminToken(){return localStorage.getItem('sy_admin_token')||'';}
+function setAdminToken(token){localStorage.setItem('sy_admin_token',token);}
+function clearAdminToken(){localStorage.removeItem('sy_admin_token');}
+function isAdmin(){return !!getAdminToken();}
+const validCards = {
+    'TRY-888888':{type:'hour',duration:3600000,name:'1小时体验卡'},
+    'TRY-666666':{type:'hour',duration:3600000,name:'1小时体验卡'},
+    'TRY-999999':{type:'hour',duration:3600000,name:'1小时体验卡'},
+    'WEEK-888888':{type:'week',duration:604800000,name:'周卡（7天）'},
+    'WEEK-666666':{type:'week',duration:604800000,name:'周卡（7天）'},
+    'WEEK-999999':{type:'week',duration:604800000,name:'周卡（7天）'},
+    'MONTH-888888':{type:'month',duration:2592000000,name:'月卡（30天）'},
+    'MONTH-666666':{type:'month',duration:2592000000,name:'月卡（30天）'},
+    'MONTH-999999':{type:'month',duration:2592000000,name:'月卡（30天）'}
+};
+function getUsedCards(){const d=localStorage.getItem('sy_used');return d?JSON.parse(d):[];}
+function markUsed(c){const u=getUsedCards();if(!u.includes(c)){u.push(c);localStorage.setItem('sy_used',JSON.stringify(u));}}
+function getAct(){const d=localStorage.getItem('sy_act');return d?JSON.parse(d):null;}
+function saveAct(expire,name){localStorage.setItem('sy_act',JSON.stringify({expire,name,time:Date.now()}));}
+function clearAct(){localStorage.removeItem('sy_act');}
+function checkAct(){if(isAdmin())return true;const a=getAct();if(!a)return false;if(Date.now()>=a.expire){clearAct();return false;}return true;}
+function fmtTime(t){const d=new Date(t);const p=n=>n.toString().padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;}
+function fmtRemain(ms){if(ms<=0)return'已过期';const d=Math.floor(ms/86400000),h=Math.floor(ms%86400000/3600000),m=Math.floor(ms%3600000/60000);if(d>0)return`剩余 ${d}天 ${h}小时`;if(h>0)return`剩余 ${h}小时 ${m}分钟`;return`剩余 ${m}分钟`;}
+function updateActState(){
+    const adminBtn=document.getElementById('adminCardBtn');
+    const nameBadge=document.getElementById('userNameBadge');
+    const name=getUserName();
+    if(nameBadge)nameBadge.textContent=name?name:'访客';
+    if(isAdmin()){
+        document.getElementById('expireTime').textContent='管理员账号';
+        document.getElementById('remainTime').textContent='永久有效';
+        document.getElementById('vipBadge').textContent='👑 管理员';
+        document.getElementById('vipBadge').style.display='block';
+        document.getElementById('activateBtn').style.display='none';
+        document.getElementById('changeCardBtn').style.display='none';
+        document.getElementById('logoutCardBtn').style.display='none';
+        if(adminBtn)adminBtn.style.display='block';
+        return;
+    }
+    if(adminBtn)adminBtn.style.display='none';
+    const a=getAct();
+    if(!a){
+        document.getElementById('vipBadge').style.display='none';
+        document.getElementById('activateBtn').style.display='block';
+        document.getElementById('changeCardBtn').style.display='none';
+        document.getElementById('logoutCardBtn').style.display='none';
+        return;
+    }
+    document.getElementById('expireTime').textContent=fmtTime(a.expire);
+    document.getElementById('remainTime').textContent=fmtRemain(a.expire-Date.now());
+    document.getElementById('vipBadge').textContent=a.name;
+    document.getElementById('vipBadge').style.display='block';
+    document.getElementById('activateBtn').style.display='none';
+    document.getElementById('changeCardBtn').style.display='block';
+    document.getElementById('logoutCardBtn').style.display='block';
+}
+function showActForm(){
+    document.getElementById('activatedState').style.display='none';
+    document.getElementById('adminLoginForm').style.display='none';
+    document.getElementById('nameLoginForm').style.display='block';
+    document.getElementById('userName').value='';
+    document.getElementById('nameMsg').textContent='';
+}
+function showAdminLogin(){
+    document.getElementById('nameLoginForm').style.display='none';
+    document.getElementById('activatedState').style.display='none';
+    document.getElementById('adminLoginForm').style.display='block';
+    document.getElementById('adminMsg').textContent='';
+}
+function getUserName(){return localStorage.getItem('sy_username')||'';}
+function setUserName(name){localStorage.setItem('sy_username',name);}
+function doNameLogin(){
+    try {
+        const name=document.getElementById('userName').value.trim();
+        const msg=document.getElementById('nameMsg');
+        if(!name){msg.textContent='请输入姓名';return;}
+        setUserName(name);
+        // 清除管理员和卡密状态，确保是纯游客模式
+        window.ADMIN_UNLOCKED = false;
+        document.body.classList.remove('admin-mode');
+        clearAdminToken();
+        clearAct();
+        msg.textContent='正在进入游客模式...';msg.className='activate-msg success';
+        setTimeout(()=>{
+            document.getElementById('activatePage').style.display='none';
+            document.getElementById('calcPage').style.display='block';
+            // 强制设置为只读模式
+            setReadOnly();
+            // 设置游客界面
+            document.getElementById('userNameBadge').textContent=name+'（游客）';
+            document.getElementById('vipBadge').style.display='none';
+            document.getElementById('adminCardBtn').style.display='none';
+            document.getElementById('activateBtn').style.display='block';
+            document.getElementById('changeCardBtn').style.display='none';
+            document.getElementById('logoutCardBtn').style.display='none';
+            // 尝试计算（只读模式下也能显示默认值）
+            try { calcAll(); } catch(e){}
+        },300);
+    } catch(e) {
+        console.error('姓名登录错误:', e);
+        alert('登录出错: ' + e.message);
+    }
+}
+document.getElementById('userName').addEventListener('keypress',e=>{if(e.key==='Enter')doNameLogin();});
+
+// 全局管理员解锁标记
+window.ADMIN_UNLOCKED = false;
+
+// 只读模式控制
+function setReadOnly(){
+    if(window.ADMIN_UNLOCKED)return; // 管理员已解锁，不执行只读
+    document.querySelectorAll('#calcPage input, #calcPage select, #calcPage textarea, #calcPage button, #calcPage .tax-btn').forEach(el=>{
+        el.disabled=true;
+        el.style.opacity='0.5';
+        el.style.cursor='not-allowed';
+        el.style.pointerEvents='none';
+    });
+    // 游客模式下，激活卡密和退出登录按钮必须可用
+    const activateBtn = document.getElementById('activateBtn');
+    if(activateBtn){
+        activateBtn.disabled=false;
+        activateBtn.style.opacity='1';
+        activateBtn.style.cursor='pointer';
+        activateBtn.style.pointerEvents='auto';
+        activateBtn.style.display='block';
+    }
+    // 退出登录按钮（最后一个logout-btn）
+    const logoutBtns = document.querySelectorAll('#calcPage .logout-btn');
+    logoutBtns.forEach(btn=>{
+        btn.disabled=false;
+        btn.style.opacity='1';
+        btn.style.cursor='pointer';
+        btn.style.pointerEvents='auto';
+    });
+    document.getElementById('changeCardBtn').style.display='none';
+    document.getElementById('logoutCardBtn').style.display='none';
+    document.getElementById('vipBadge').style.display='none';
+}
+function setEditable(){
+    document.querySelectorAll('#calcPage input, #calcPage select, #calcPage textarea, #calcPage button, #calcPage .tax-btn').forEach(el=>{
+        el.disabled=false;
+        el.style.opacity='1';
+        el.style.cursor='';
+        el.style.pointerEvents='auto';
+    });
+    if(isAdmin()||window.ADMIN_UNLOCKED){
+        document.getElementById('activateBtn').style.display='none';
+        document.getElementById('changeCardBtn').style.display='none';
+        document.getElementById('logoutCardBtn').style.display='none';
+        document.getElementById('vipBadge').style.display='block';
+    }else{
+        document.getElementById('activateBtn').style.display='none';
+        document.getElementById('changeCardBtn').style.display='block';
+        document.getElementById('logoutCardBtn').style.display='block';
+        document.getElementById('vipBadge').style.display='block';
+    }
+}
+// 强制管理员解锁（100%可用）
+function forceAdminUnlock(){
+    window.ADMIN_UNLOCKED = true;
+    document.body.classList.add('admin-mode');
+    // 强制所有元素可编辑
+    document.querySelectorAll('#calcPage input, #calcPage select, #calcPage textarea, #calcPage button, #calcPage .tax-btn, #calcPage [role="button"]').forEach(el=>{
+        el.disabled=false;
+        el.removeAttribute('disabled');
+        el.style.opacity='1';
+        el.style.cursor='';
+        el.style.pointerEvents='auto';
+    });
+    // 额外处理滑块
+    document.querySelectorAll('#calcPage input[type="range"]').forEach(el=>{
+        el.disabled=false;
+        el.removeAttribute('disabled');
+        el.style.pointerEvents='auto';
+    });
+    // 设置管理员界面
+    document.getElementById('userNameBadge').textContent='管理员';
+    document.getElementById('vipBadge').textContent='👑 管理员';
+    document.getElementById('vipBadge').style.display='block';
+    document.getElementById('adminCardBtn').style.display='block';
+    document.getElementById('activateBtn').style.display='none';
+    document.getElementById('changeCardBtn').style.display='none';
+    document.getElementById('logoutCardBtn').style.display='none';
+    // 启动持续解锁定时器，防止任何代码设置只读
+    if(window.ADMIN_UNLOCK_INTERVAL) clearInterval(window.ADMIN_UNLOCK_INTERVAL);
+    window.ADMIN_UNLOCK_INTERVAL = setInterval(()=>{
+        if(window.ADMIN_UNLOCKED){
+            document.querySelectorAll('#calcPage input, #calcPage select, #calcPage button, #calcPage .tax-btn').forEach(el=>{
+                if(el.disabled){
+                    el.disabled=false;
+                    el.removeAttribute('disabled');
+                    el.style.opacity='1';
+                    el.style.pointerEvents='auto';
+                }
+            });
+        }
+    }, 500);
+}
+function logoutCard(){
+    if(!confirm('确定退出当前卡密吗？退出后将恢复只读模式。'))return;
+    clearAct();
+    if(window._t)clearInterval(window._t);
+    setReadOnly();
+    updateActState();
+    alert('已退出卡密，恢复只读模式');
+}
+
+// 卡密激活弹窗
+function openActivateModal(){
+    document.getElementById('activateModal').classList.add('show');
+    document.getElementById('modalCardKey').value='';
+    document.getElementById('modalActivateMsg').textContent='';
+    setTimeout(()=>document.getElementById('modalCardKey').focus(),100);
+}
+function closeActivateModal(){document.getElementById('activateModal').classList.remove('show');}
+document.getElementById('activateModal').addEventListener('click',e=>{if(e.target.id==='activateModal')closeActivateModal();});
+document.getElementById('modalCardKey').addEventListener('keypress',e=>{if(e.key==='Enter')doModalActivate();});
+
+async function doModalActivate(){
+    const card=document.getElementById('modalCardKey').value.trim().toUpperCase();
+    const msg=document.getElementById('modalActivateMsg');
+    if(!card){msg.textContent='请输入卡密';msg.className='gen-msg error';return;}
+    msg.textContent='正在激活...';msg.className='gen-msg';
+    const result=await validateCard(card);
+    if(!result.success){
+        msg.textContent=result.message||'激活失败';msg.className='gen-msg error';return;
+    }
+    const cardInfo=result.card;
+    const expireTime=cardInfo.duration===Infinity?Infinity:cardInfo.expireTime;
+    saveAct(expireTime,cardInfo.name);
+    msg.textContent=result.message||'激活成功';msg.className='gen-msg success';
+    setTimeout(()=>{
+        closeActivateModal();
+        setEditable();
+        updateActState();
+        calcAll();
+        if(window._t)clearInterval(window._t);
+        if(!isAdmin()){
+            window._t=setInterval(()=>{
+                if(!checkAct()){
+                    clearInterval(window._t);
+                    alert('卡密已过期，已恢复只读模式');
+                    setReadOnly();
+                }else{
+                    updateActState();
+                }
+            },60000);
+        }
+    },1000);
+}
+function doAdminLogin(){
+    try {
+        const u=document.getElementById('adminUser').value.trim();
+        const p=document.getElementById('adminPass').value;
+        const msg=document.getElementById('adminMsg');
+        if(!u||!p){msg.textContent='请输入账号和密码';msg.className='activate-msg error';return;}
+        // 先本地验证账号密码
+        if(u==='1243685477' && p==='197422'){
+            msg.textContent='正在登录验证...';msg.className='activate-msg';
+            // 调用后端API登录，获取真正的管理员token（用于卡密管理）
+            fetch(API_BASE+'/api/admin/login',{
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({username:u,password:p})
+            }).then(r=>r.json()).then(data=>{
+                if(data.success && data.token){
+                    setAdminToken(data.token);
+                }else{
+                    setAdminToken('local_admin_'+Date.now());
+                }
+                enterAdminMode();
+            }).catch(err=>{
+                console.error('API登录错误:', err);
+                setAdminToken('local_admin_'+Date.now());
+                enterAdminMode();
+            });
+            return;
+        }
+        msg.textContent='账号或密码错误';msg.className='activate-msg error';
+    } catch(e) {
+        console.error('登录函数错误:', e);
+        alert('登录出错: ' + e.message);
+    }
+}
+
+// 进入管理员模式
+function enterAdminMode(){
+    window.ADMIN_UNLOCKED = true;
+    document.body.classList.add('admin-mode');
+    localStorage.setItem('sy_username','管理员');
+    const msg=document.getElementById('adminMsg');
+    if(msg){msg.textContent='登录成功，正在进入...';msg.className='activate-msg success';}
+    document.getElementById('activatePage').style.display='none';
+    document.getElementById('calcPage').style.display='block';
+    forceAdminUnlock();
+    try { calcAll(); } catch(e){}
+    setTimeout(forceAdminUnlock, 200);
+    setTimeout(forceAdminUnlock, 500);
+}
+document.getElementById('adminPass').addEventListener('keypress',e=>{if(e.key==='Enter')doAdminLogin();});
+
+// 卡密管理（调用后端API）
+const CARD_TYPES={
+    hour:{prefix:'TRY',duration:3600000,name:'1小时体验卡',icon:'⏱️'},
+    week:{prefix:'WEEK',duration:604800000,name:'周卡（7天）',icon:'📅'},
+    month:{prefix:'MONTH',duration:2592000000,name:'月卡（30天）',icon:'👑'},
+    forever:{prefix:'FOREVER',duration:Infinity,name:'永久卡',icon:'♾️'}
+};
+
+function getCardStatus(card){
+    if(!card.used)return 'active';
+    if(card.duration===Infinity)return 'used';
+    if(card.expireTime&&Date.now()>=card.expireTime)return 'expired';
+    return 'used';
+}
+function formatCardTime(ts){if(!ts)return '—';const d=new Date(ts);const p=n=>n.toString().padStart(2,'0');return `${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;}
+
+async function generateCards(){
+    const type=document.getElementById('genType').value;
+    const count=parseInt(document.getElementById('genCount').value)||1;
+    const msg=document.getElementById('genMsg');
+    if(count<1||count>100){msg.textContent='数量必须在1-100之间';msg.className='gen-msg error';return;}
+    msg.textContent='正在生成...';msg.className='gen-msg';
+    try{
+        const r=await fetch(API_BASE+'/api/cards/generate',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({token:getAdminToken(),type,count})
+        });
+        const data=await r.json();
+        if(data.success){
+            msg.textContent=`成功生成 ${data.count} 张卡密`;msg.className='gen-msg success';
+            refreshCardList();
+        }else{
+            msg.textContent=data.message||'生成失败';msg.className='gen-msg error';
+        }
+    }catch(e){
+        msg.textContent='服务器连接失败';msg.className='gen-msg error';
+    }
+    setTimeout(()=>{msg.textContent='';},3000);
+}
+
+async function refreshCardList(){
+    const container=document.getElementById('cardTableContainer');
+    const currentDevice=getDeviceId();
+    try{
+        const r=await fetch(API_BASE+'/api/cards?token='+getAdminToken());
+        const data=await r.json();
+        if(!data.success){
+            container.innerHTML='<div class="empty-state">加载失败：'+(data.message||'未知错误')+'</div>';
+            return;
+        }
+        const cards=data.cards||[];
+        document.getElementById('cardCount').textContent=`(${cards.length}张)`;
+        if(cards.length===0){container.innerHTML='<div class="empty-state">暂无卡密，点击上方"生成卡密"创建</div>';return;}
+        let html='<table class="card-table"><thead><tr><th>卡密</th><th>类型</th><th>状态</th><th>绑定设备</th><th>到期时间</th><th>操作</th></tr></thead><tbody>';
+        cards.forEach((card,idx)=>{
+            const status=getCardStatus(card);
+            const statusText={active:'未使用',used:'使用中',expired:'已过期'}[status];
+            const typeInfo=CARD_TYPES[card.type]||{icon:'?',name:card.name};
+            const deviceInfo=card.deviceId?card.deviceId.substring(0,12)+'...':'—';
+            const isCurrentDevice=card.deviceId===currentDevice;
+            const deviceLabel=isCurrentDevice?'<span style="color:#28c780;">本设备</span>':deviceInfo;
+            html+=`<tr>
+                <td><span class="card-key" onclick="copyCard('${card.key}')">${card.key}</span></td>
+                <td><span class="type-tag ${card.type}">${typeInfo.icon} ${typeInfo.name.replace(/（.*?）/g,'').replace(/卡.*/,'卡')}</span></td>
+                <td><span class="status-tag ${status}">${statusText}</span></td>
+                <td>${deviceLabel}</td>
+                <td>${card.duration===Infinity?'永久':formatCardTime(card.expireTime)}</td>
+                <td>
+                    <button class="copy-btn" onclick="copyCard('${card.key}')">📋复制</button>
+                    <button class="del-btn" onclick="deleteCard('${card.key}')">🗑️删除</button>
+                </td>
+            </tr>`;
+        });
+        html+='</tbody></table>';
+        container.innerHTML=html;
+    }catch(e){
+        container.innerHTML='<div class="empty-state">服务器连接失败，请确认后端已启动</div>';
+    }
+}
+
+function copyCard(key){
+    navigator.clipboard.writeText(key).then(()=>{
+        alert('卡密已复制：'+key);
+    }).catch(()=>{
+        const ta=document.createElement('textarea');ta.value=key;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+        alert('卡密已复制：'+key);
+    });
+}
+
+async function deleteCard(key){
+    if(!confirm('确定删除这张卡密吗？'))return;
+    try{
+        await fetch(API_BASE+'/api/cards/'+key+'?token='+getAdminToken(),{method:'DELETE'});
+        refreshCardList();
+    }catch(e){
+        alert('删除失败：服务器连接失败');
+    }
+}
+
+async function clearExpiredCards(){
+    try{
+        const r=await fetch(API_BASE+'/api/cards/clear-expired',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({token:getAdminToken()})
+        });
+        const data=await r.json();
+        if(data.success){
+            alert(`已清理 ${data.cleared} 张过期卡密`);
+            refreshCardList();
+        }else{
+            alert(data.message||'清理失败');
+        }
+    }catch(e){
+        alert('服务器连接失败');
+    }
+}
+
+function clearAllCards(){
+    alert('网页版不支持一键清空全部卡密，请逐个删除或联系管理员');
+}
+
+function openCardModal(){
+    if(!isAdmin()){alert('只有管理员可以管理卡密');return;}
+    document.getElementById('cardModal').classList.add('show');
+    refreshCardList();
+}
+function closeCardModal(){document.getElementById('cardModal').classList.remove('show');}
+document.getElementById('cardModal').addEventListener('click',e=>{if(e.target.id==='cardModal')closeCardModal();});
+
+// 卡密激活验证（调用后端API，带设备绑定）
+function validateCard(cardKey){
+    return new Promise((resolve)=>{
+        fetch(API_BASE+'/api/cards/activate',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({
+                key:cardKey,
+                deviceId:getDeviceId(),
+                deviceInfo:getDeviceInfo()
+            })
+        }).then(r=>r.json()).then(data=>{
+            resolve(data);
+        }).catch(()=>{
+            resolve({success:false,message:'服务器连接失败，请确认后端已启动'});
+        });
+    });
+}
+function doActivate(){
+    const card=document.getElementById('cardKey').value.trim().toUpperCase();
+    const msg=document.getElementById('activateMsg');
+    if(!card){msg.textContent='请输入卡密';msg.className='activate-msg error';return;}
+    const result=validateCard(card);
+    if(!result.valid){msg.textContent=result.msg;msg.className='activate-msg error';return;}
+    const cardInfo=result.card;
+    const expireTime=cardInfo.duration===Infinity?Infinity:Date.now()+cardInfo.duration;
+    saveAct(expireTime,cardInfo.name);
+    msg.textContent=result.msg;msg.className='activate-msg success';
+    setTimeout(enterApp,1200);
+}
+function enterApp(){
+    document.getElementById('activatePage').style.display='none';
+    document.getElementById('calcPage').style.display='block';
+    updateActState();
+    calcAll();
+    if(window._t)clearInterval(window._t);
+    if(isAdmin()||window.ADMIN_UNLOCKED){
+        forceAdminUnlock();
+    }else if(checkAct()){
+        setEditable();
+        window._t=setInterval(()=>{
+            if(!checkAct()){
+                clearInterval(window._t);
+                alert('卡密已过期，已恢复只读模式');
+                setReadOnly();
+            }else{
+                updateActState();
+            }
+        },60000);
+    }else{
+        setReadOnly();
+    }
+}
+function doLogout(){
+    if(window._t)clearInterval(window._t);
+    // 清除管理员状态
+    window.ADMIN_UNLOCKED = false;
+    document.body.classList.remove('admin-mode');
+    if(window.ADMIN_UNLOCK_INTERVAL){
+        clearInterval(window.ADMIN_UNLOCK_INTERVAL);
+        window.ADMIN_UNLOCK_INTERVAL = null;
+    }
+    if(isAdmin()){
+        clearAdminToken();
+        const adminBtn=document.getElementById('adminCardBtn');
+        if(adminBtn)adminBtn.style.display='none';
+    }
+    // 清除卡密激活状态
+    clearAct();
+    localStorage.removeItem('sy_username');
+    // 隐藏计算器页面，显示登录页面
+    document.getElementById('calcPage').style.display='none';
+    document.getElementById('activatePage').style.display='flex';
+    // 显示管理员登录表单（需要重新输入账号密码）
+    document.getElementById('activatedState').style.display='none';
+    document.getElementById('nameLoginForm').style.display='none';
+    document.getElementById('adminLoginForm').style.display='block';
+    // 清空账号密码输入框
+    document.getElementById('adminUser').value='';
+    document.getElementById('adminPass').value='';
+    document.getElementById('adminMsg').textContent='';
+}
+// 所有事件绑定移到页面加载完成后执行
+window.addEventListener('load',()=>{
+    // 绑定卡密输入框回车事件（如果存在）
+    const cardKeyEl = document.getElementById('cardKey');
+    if(cardKeyEl){
+        cardKeyEl.addEventListener('keypress',e=>{if(e.key==='Enter')doActivate();});
+    }
+
+    // 检查是否已登录管理员
+    if(isAdmin()){
+        window.ADMIN_UNLOCKED = true;
+        document.body.classList.add('admin-mode');
+        enterApp();
+        setTimeout(()=>{
+            try { forceAdminUnlock(); } catch(e){}
+        }, 300);
+    }else if(checkAct()){
+        enterApp();
+    }else{
+        // 默认显示管理员登录表单
+        document.getElementById('activatedState').style.display='none';
+        document.getElementById('nameLoginForm').style.display='none';
+        document.getElementById('adminLoginForm').style.display='block';
+    }
+
+    // 绑定个税按钮事件
+    document.querySelectorAll('.tax-btn').forEach(btn=>{
+        btn.addEventListener('click',()=>{
+            document.querySelectorAll('.tax-btn').forEach(b=>b.classList.remove('active'));
+            btn.classList.add('active');
+            taxRate=parseFloat(btn.dataset.rate);
+            const labels={'0':'不扣税','0.03':'3%','0.05':'5%','0.08':'8%','0.10':'10%','0.15':'15%'};
+            const currentTaxEl = document.getElementById('currentTax');
+            if(currentTaxEl) currentTaxEl.textContent='当前税率：'+labels[btn.dataset.rate];
+            calcAll();
+        });
+    });
+
+    // 绑定滑块事件
+    const backRateEl = el('backRate');
+    const backRateValEl = el('backRateVal');
+    if(backRateEl && backRateValEl){
+        backRateEl.addEventListener('input',()=>{
+            backRateValEl.textContent=parseFloat(backRateEl.value).toFixed(1)+'%';
+            calcAll();
+        });
+    }
+    const feeRateEl = el('feeRate');
+    const feeRateValEl = el('feeRateVal');
+    if(feeRateEl && feeRateValEl){
+        feeRateEl.addEventListener('input',()=>{
+            feeRateValEl.textContent=parseFloat(feeRateEl.value).toFixed(1)+'%';
+            calcAll();
+        });
+    }
+
+    // 绑定输入框事件
+    ['giftValue','taskLevel','bossGive','selfTask','buyTask','buyDiscount','wMai','wWeek','wShou','wHost','wNight','wAll','wInvite','wOther'].forEach(id=>{
+        const inputEl = el(id);
+        if(inputEl){
+            inputEl.addEventListener('input',calcAll);
+        }
+    });
+
+    console.log('所有事件绑定完成');
+});
+
+function toggleRef(){
+    const b=el('refBody'),a=el('refArrow');
+    b.classList.toggle('show');
+    a.textContent=b.classList.contains('show')?'收起':'展开';
+}
+
+function calcAll(){
+    // 礼物分成
+    const gift=Number(el('giftValue').value)||0;
+    const backR=Number(el('backRate').value)/100;
+    const feeR=Number(el('feeRate').value)/100;
+    const backMoney=gift*backR;
+    const feeMoney=backMoney*feeR;
+    const preTax=backMoney-feeMoney;
+    const taxMoney=preTax*taxRate;
+    const realGet=preTax-taxMoney;
+    const getPer=backR*(1-feeR)*(1-taxRate);
+
+    el('dGiftValue').textContent='¥'+gift.toFixed(2);
+    el('dBackMoney').textContent='¥'+backMoney.toFixed(2);
+    el('dFeeMoney').textContent='¥'+feeMoney.toFixed(2);
+    el('dPreTax').textContent='¥'+preTax.toFixed(2);
+    el('dTaxMoney').textContent='¥'+taxMoney.toFixed(2);
+    el('dRealGet').textContent='¥'+realGet.toFixed(2);
+
+    // 任务收益
+    const taskLv=Number(el('taskLevel').value)||0;
+    const boss=Number(el('bossGive').value)||0;
+    const selfTask=Number(el('selfTask').value)||0;
+    const buyTask=Number(el('buyTask').value)||0;
+    const discount=Number(el('buyDiscount').value)||0;
+    const target=taskLv*100;
+    const totalFlow=boss+selfTask+buyTask;
+    const gap=target-totalFlow;
+
+    // 状态标签
+    const gb=el('gapBadge');
+    if(gap>0){gb.textContent='还差 ¥'+gap.toFixed(0);gb.className='gap-badge';}
+    else{gb.textContent='已达标 ✅';gb.className='gap-badge ok';}
+
+    // 任务概况
+    el('oTarget').textContent='¥'+target.toFixed(0);
+    el('oTargetHint').textContent=taskLv.toFixed(1)+' × 100';
+    el('oBoss').textContent='¥'+totalFlow.toFixed(0);
+    el('oGap').textContent=(gap>0?'¥'+gap.toFixed(0):'已达标');
+
+    // 福利
+    const wMai=Number(el('wMai').value)||0;
+    const wWeek=Number(el('wWeek').value)||0;
+    const wShou=Number(el('wShou').value)||0;
+    const wHost=Number(el('wHost').value)||0;
+    const wNight=Number(el('wNight').value)||0;
+    const wAll=Number(el('wAll').value)||0;
+    const wInvite=Number(el('wInvite').value)||0;
+    const wOther=Number(el('wOther').value)||0;
+    const welfare=wMai+wWeek+wShou+wHost+wNight+wAll+wInvite+wOther;
+    el('welfareTotal').textContent='¥'+welfare.toFixed(2);
+    el('welfareSum').textContent='¥'+welfare.toFixed(2);
+
+    // 成本与盈亏
+    const selfCost=selfTask;
+    const buyCost=buyTask*discount;
+    const totalCost=selfCost+buyCost;
+    const totalIncome=totalFlow*getPer;
+    const netProfit=totalIncome-totalCost+welfare;
+
+    // 总成本
+    const cc=el('cCostVal'),cct=el('cCostTag'),ccd=el('cCostDesc');
+    cc.textContent='¥'+totalCost.toFixed(2);
+    cc.className='cc-val profit';
+    cct.textContent='成本';
+    cct.className='cc-tag profit';
+    ccd.textContent=`自怼 ¥${selfCost.toFixed(0)} + 沃尔玛 ¥${buyCost.toFixed(0)}`;
+
+    // 最终盈亏
+    const cn=el('cNetVal'),cnt=el('cNetTag'),cnd=el('cNetDesc');
+    cn.textContent=(netProfit>=0?'+¥':'-¥')+Math.abs(netProfit).toFixed(2);
+    cn.className='cc-val '+(netProfit>=0?'profit':'loss');
+    cnt.textContent=netProfit>=0?'盈利':'亏损';
+    cnt.className='cc-tag '+(netProfit>=0?'profit':'loss');
+    cnd.textContent=`总收益 ¥${totalIncome.toFixed(0)} - 成本 ¥${totalCost.toFixed(0)} + 福利 ¥${welfare.toFixed(0)}`;
+}
+</script>
+</body>
+</html>
